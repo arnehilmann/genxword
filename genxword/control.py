@@ -27,8 +27,6 @@ PY2 = sys.version_info[0] == 2
 if PY2:
     input = raw_input
     chr = unichr
-    calculate.Exportfiles.word_bank = calculate.Exportfiles.old_word_bank
-    calculate.Exportfiles.legend = calculate.Exportfiles.old_legend
 
 base_dir = os.path.abspath(os.path.dirname(__file__))
 d = '/usr/local/share' if 'local' in base_dir.split('/') else '/usr/share'
@@ -38,7 +36,7 @@ if PY2:
 gettext.textdomain('genxword')
 _ = gettext.gettext
 
-usage_info = _("""The word list file contains the words and clues, or just words, that you want in your crossword. 
+usage_info = _("""The word list file contains the words and clues, or just words, that you want in your crossword.
 For further information on how to format the word list file and about the other options, please consult the man page.
 """)
 
@@ -113,7 +111,7 @@ class Genxword(object):
             if len(self.word_list[0][0]) < min(nrow, ncol):
                 self.nrow, self.ncol = nrow, ncol
 
-    def gengrid(self, name, saveformat):
+    def gengrid(self):
         i = 0
         while 1:
             print(_('Calculating your crossword...'))
@@ -132,9 +130,13 @@ class Genxword(object):
                 inc_gsize = input(_('And increase the grid size? [Y/n] '))
                 if inc_gsize.strip() != _('n'):
                     self.nrow += 2;self.ncol += 2
+        return vars(calc)
+
+    def storegrid(self, grid, name, saveformat):
         lang = _('Across/Down').split('/')
         message = _('The following files have been saved to your current working directory:\n')
-        exp = calculate.Exportfiles(self.nrow, self.ncol, calc.best_grid, calc.best_word_list, '-')
+        import export
+        exp = export.Exportfiles(self.nrow, self.ncol, grid.best_grid, grid.best_word_list, '-')
         exp.create_files(name, saveformat, lang, message, self.Thai)
 
 def main():
@@ -150,4 +152,5 @@ def main():
     gen = Genxword(args.auto, args.mixmode)
     gen.wlist(args.infile, args.nwords)
     gen.grid_size()
-    gen.gengrid(args.output, args.saveformat)
+    grid = gen.gengrid()
+    gen.storegrid(grid, args.output, args.saveformat)

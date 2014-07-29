@@ -19,11 +19,10 @@
 # You should have received a copy of the GNU General Public License
 # along with genxword.  If not, see <http://www.gnu.org/licenses/gpl.html>.
 
-from gi.repository import Pango, PangoCairo
-import random, time, cairo
+import random, time
 from operator import itemgetter
 from collections import defaultdict
- 
+
 class Crossword(object):
     def __init__(self, rows, cols, empty=' ', available_words=[]):
         self.rows = rows
@@ -31,7 +30,7 @@ class Crossword(object):
         self.empty = empty
         self.available_words = available_words
         self.let_coords = defaultdict(list)
- 
+
     def prep_grid_words(self):
         self.current_word_list = []
         self.let_coords.clear()
@@ -54,7 +53,7 @@ class Crossword(object):
                 break
         answer = '\n'.join([''.join(['{} '.format(c) for c in self.best_grid[r]]) for r in range(self.rows)])
         return answer + '\n\n' + str(len(self.best_word_list)) + ' out of ' + str(wordlist_length)
- 
+
     def get_coords(self, word):
         """Return possible coordinates for each letter."""
         word_length = len(word[0])
@@ -80,7 +79,7 @@ class Crossword(object):
             return max(coordlist, key=itemgetter(3))
         else:
             return
- 
+
     def first_word(self, word):
         """Place the first word at a random position in the grid."""
         vertical = random.randrange(0, 2)
@@ -98,13 +97,13 @@ class Crossword(object):
         if not coordlist:
             return
         row, col, vertical = coordlist[0], coordlist[1], coordlist[2]
-        self.set_word(word, row, col, vertical) 
- 
+        self.set_word(word, row, col, vertical)
+
     def check_score_horiz(self, word, row, col, word_length, score=1):
         cell_occupied = self.cell_occupied
         if col and cell_occupied(row, col-1) or col + word_length != self.cols and cell_occupied(row, col + word_length):
             return 0
-        for letter in word[0]:            
+        for letter in word[0]:
             active_cell = self.grid[row][col]
             if active_cell == self.empty:
                 if row + 1 != self.rows and cell_occupied(row+1, col) or row and cell_occupied(row-1, col):
@@ -120,7 +119,7 @@ class Crossword(object):
         cell_occupied = self.cell_occupied
         if row and cell_occupied(row-1, col) or row + word_length != self.rows and cell_occupied(row + word_length, col):
             return 0
-        for letter in word[0]:            
+        for letter in word[0]:
             active_cell = self.grid[row][col]
             if active_cell == self.empty:
                 if col + 1 != self.cols and cell_occupied(row, col+1) or col and cell_occupied(row, col-1):
@@ -131,7 +130,7 @@ class Crossword(object):
                 return 0
             row += 1
         return score
- 
+
     def set_word(self, word, row, col, vertical):
         """Put words on the grid and add them to the word list."""
         word.extend([row, col, vertical])
@@ -148,203 +147,10 @@ class Crossword(object):
                 row += 1
             else:
                 col += 1
- 
+
     def cell_occupied(self, row, col):
         cell = self.grid[row][col]
-        if cell == self.empty: 
+        if cell == self.empty:
             return False
         else:
             return True
- 
-class Exportfiles(object):
-    def __init__(self, rows, cols, grid, wordlist, empty=' '):
-        self.rows = rows
-        self.cols = cols
-        self.grid = grid
-        self.wordlist = wordlist
-        self.empty = empty
-
-    def order_number_words(self):
-        self.wordlist.sort(key=itemgetter(2, 3))
-        count, icount = 1, 1
-        for word in self.wordlist:
-            word.append(count)
-            if icount < len(self.wordlist):
-                if word[2] == self.wordlist[icount][2] and word[3] == self.wordlist[icount][3]:
-                    pass
-                else:
-                    count += 1
-            icount += 1
-
-    def draw_img(self, name, context, px, xoffset, yoffset, RTL):
-        for r in range(self.rows):
-            for i, c in enumerate(self.grid[r]):
-                if c != self.empty:
-                    context.set_line_width(1.0)
-                    context.set_source_rgb(0.5, 0.5, 0.5)
-                    context.rectangle(xoffset+(i*px), yoffset+(r*px), px, px)
-                    context.stroke()
-                    context.set_line_width(1.0)
-                    context.set_source_rgb(0, 0, 0)
-                    context.rectangle(xoffset+1+(i*px), yoffset+1+(r*px), px-2, px-2)
-                    context.stroke()
-                    if '_key.' in name:
-                        self.draw_letters(c, context, xoffset+(i*px)+10, yoffset+(r*px)+8, 'monospace 11')
-
-        self.order_number_words()
-        for word in self.wordlist:
-            if RTL:
-                x, y = ((self.cols-1)*px)+xoffset-(word[3]*px), yoffset+(word[2]*px)
-            else:
-                x, y = xoffset+(word[3]*px), yoffset+(word[2]*px)
-            self.draw_letters(str(word[5]), context, x+3, y+2, 'monospace 6')
-
-    def draw_letters(self, text, context, xval, yval, fontdesc):
-        context.move_to(xval, yval)
-        layout = PangoCairo.create_layout(context)
-        font = Pango.FontDescription(fontdesc)
-        layout.set_font_description(font)
-        layout.set_text(text, -1)
-        PangoCairo.update_layout(context, layout)
-        PangoCairo.show_layout(context, layout)
-
-    def create_img(self, name, RTL):
-        px = 28
-        if name.endswith('png'):
-            surface = cairo.ImageSurface(cairo.FORMAT_RGB24, 10+(self.cols*px), 10+(self.rows*px))
-        else:
-            surface = cairo.SVGSurface(name, 10+(self.cols*px), 10+(self.rows*px))
-        context = cairo.Context(surface)
-        context.set_source_rgb(1, 1, 1)
-        context.rectangle(0, 0, 10+(self.cols*px), 10+(self.rows*px))
-        context.fill()
-        self.draw_img(name, context, 28, 5, 5, RTL)
-        if name.endswith('png'):
-            surface.write_to_png(name)
-        else:
-            context.show_page()
-            surface.finish()
-
-    def export_pdf(self, xwname, filetype, lang, RTL, width=595, height=842):
-        px, xoffset, yoffset = 28, 36, 72
-        name = xwname + filetype
-        surface = cairo.PDFSurface(name, width, height)
-        context = cairo.Context(surface)
-        context.set_source_rgb(1, 1, 1)
-        context.rectangle(0, 0, width, height)
-        context.fill()
-        context.save()
-        sc_ratio = float(width-(xoffset*2))/(px*self.cols)
-        if self.cols <= 21:
-            sc_ratio, xoffset = 0.8, float(1.25*width-(px*self.cols))/2
-        context.scale(sc_ratio, sc_ratio)
-        self.draw_img(name, context, 28, xoffset, 80, RTL)
-        context.restore()
-        context.set_source_rgb(0, 0, 0)
-        self.draw_letters(xwname, context, round((width-len(xwname)*10)/2), yoffset/2, 'Sans 14 bold')
-        x, y = 36, yoffset+5+(self.rows*px*sc_ratio)
-        clues = self.wrap(self.legend(lang))
-        self.draw_letters(lang[0], context, x, y, 'Sans 12 bold')
-        for line in clues.splitlines()[3:]:
-            if y >= height-(yoffset/2)-15:
-                context.show_page()
-                y = yoffset/2
-            if line.strip() == lang[1]:
-                if self.cols > 17 and y > 700:
-                    context.show_page()
-                    y = yoffset/2
-                y += 8
-                self.draw_letters(lang[1], context, x, y+15, 'Sans 12 bold')
-                y += 16
-                continue
-            self.draw_letters(line, context, x, y+18, 'Serif 9')
-            y += 16
-        context.show_page()
-        surface.finish()
-
-    def create_files(self, name, save_format, lang, message, Thai=False):
-        if not Thai and Pango.find_base_dir(self.wordlist[0][0], -1) == Pango.Direction.RTL:
-            [i.reverse() for i in self.grid]
-            RTL = True
-        else:
-            RTL = False
-        img_files = ''
-        if 'p' in save_format:
-            self.export_pdf(name, '_grid.pdf', lang, RTL)
-            self.export_pdf(name, '_key.pdf', lang, RTL)
-            img_files += name + '_grid.pdf ' + name + '_key.pdf '
-        if 'l' in save_format:
-            self.export_pdf(name, 'l_grid.pdf', lang, RTL, 612, 792)
-            self.export_pdf(name, 'l_key.pdf', lang, RTL, 612, 792)
-            img_files += name + 'l_grid.pdf ' + name + 'l_key.pdf '
-        if 'n' in save_format:
-            self.create_img(name + '_grid.png', RTL)
-            self.create_img(name + '_key.png', RTL)
-            img_files += name + '_grid.png ' + name + '_key.png '
-        if 's' in save_format:
-            self.create_img(name + '_grid.svg', RTL)
-            self.create_img(name + '_key.svg', RTL)
-            img_files += name + '_grid.svg ' + name + '_key.svg '
-        if 'n' in save_format or 's' in save_format:
-            self.clues_txt(name + '_clues.txt', lang, Thai)
-            img_files += name + '_clues.txt'
-        if message:
-            print(message + img_files)
-
-    def wrap(self, text, width=80):
-        lines = []
-        for paragraph in text.split('\n'):
-            line = []
-            len_line = 0
-            for word in paragraph.split():
-                len_word = len(word)
-                if len_line + len_word <= width:
-                    line.append(word)
-                    len_line += len_word + 1
-                else:
-                    lines.append(' '.join(line))
-                    line = [word]
-                    len_line = len_word + 1
-            lines.append(' '.join(line))
-        return '\n'.join(lines)
-
-    def word_bank(self, Thai): 
-        temp_list = list(self.wordlist)
-        random.shuffle(temp_list)
-        if Thai:
-            return 'Word bank\n' + ''.join(['{}\n'.format(''.join(word[0])) for word in temp_list])
-        else:
-            return 'Word bank\n' + ''.join(['{}\n'.format(word[0]) for word in temp_list])
- 
-    def legend(self, lang):
-        outStrA, outStrD = '\nClues\n{}\n'.format(lang[0]), '{}\n'.format(lang[1])
-        for word in self.wordlist:
-            if word[4]:
-                outStrD += '{:d}. {}\n'.format(word[5], word[1])
-            else:
-                outStrA += '{:d}. {}\n'.format(word[5], word[1])
-        return outStrA + outStrD
-
-    def old_word_bank(self, Thai): 
-        temp_list = list(self.wordlist)
-        random.shuffle(temp_list)
-        if Thai:
-            words = 'Word bank\n' + ''.join([u'{}\n'.format(''.join(word[0])) for word in temp_list])
-        else:
-            words = 'Word bank\n' + ''.join([u'{}\n'.format(word[0]) for word in temp_list])
-        return words.encode('utf-8')
- 
-    def old_legend(self, lang):
-        outStrA, outStrD = '\nClues\n{}\n'.format(lang[0]), '{}\n'.format(lang[1])
-        for word in self.wordlist:
-            if word[4]:
-                outStrD += u'{:d}. {}\n'.format(word[5], word[1])
-            else:
-                outStrA += u'{:d}. {}\n'.format(word[5], word[1])
-        string = outStrA + outStrD
-        return string.encode('utf-8')
- 
-    def clues_txt(self, name, lang, Thai):
-        with open(name, 'w') as clues_file:
-            clues_file.write(self.word_bank(Thai))
-            clues_file.write(self.legend(lang))
