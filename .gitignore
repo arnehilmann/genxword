@@ -1,3 +1,7 @@
 dist/
 genxword.egg-info/
 mo/
+*.pyc
+tmp/
+ve/
+run
