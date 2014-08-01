@@ -1,4 +1,0 @@
-#!/bin/bash
-set -x
-
-python -c "import genxword.control2; genxword.control2.main()" --output examples/output/aha examples/word_lists/de_simple.txt --auto
